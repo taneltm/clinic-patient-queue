@@ -1,6 +1,6 @@
 # Clinic patient queue demo
 
-This is essentially a realtime web application demo, which uses RethinkDB and WebSocket technology to synchronize information exchange between front-end applications in realtime.
+This is a realtime web application demo, which uses RethinkDB and WebSocket technology to synchronize information exchange between front-end applications in realtime.
 
 ## Technologies used:
 
