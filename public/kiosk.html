@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Kiosk app demo</title>
+
+  <link rel="stylesheet" href="styles/kiosk.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Sans">
+  <script src="https://use.fontawesome.com/633a459ec2.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.7.3/socket.io.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.2.4/vue.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.18.1/moment.min.js"></script>
+</head>
+<body>
+  <header>Take a number!</header>
+  <main>
+    <table class="doctors">
+      <tbody>
+        <tr class="doctor" v-for="room in rooms">
+          <td class="room">{{room.roomId}}</td>
+          <td class="name">{{room.doctor}}</td>
+          <td class="register">
+            <button v-on:click="register(room.roomId)">Register</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </main>
+
+  <script>
+    // Setup the rooms list
+    var main = new Vue({
+      el: 'main',
+
+      data: {
+        rooms: []
+      },
+
+      methods: {
+        register: function (roomId) {
+          socket.emit('register', roomId, function(patientNumber) {
+            alert(patientNumber);
+          });
+        }
+      }
+    });
+
+    // Initialize socket.io and make the connection to the server
+    // By default, socket.io will connect to the server which served the html file
+    var socket = io();
+
+    socket.on('connect', function() {
+      socket.emit('kioskBoot');
+    });
+
+    socket.on('rooms', function(rooms) {
+      main.rooms = rooms;
+    });
+  </script>
+</body>
+</html>

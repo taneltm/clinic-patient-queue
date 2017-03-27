@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Info panel app demo</title>
+
+  <link rel="stylesheet" href="styles/info.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Sans">
+  <script src="https://use.fontawesome.com/633a459ec2.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.7.3/socket.io.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.2.4/vue.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.18.1/moment.min.js"></script>
+</head>
+<body>
+
+  <header>
+    <div class="room-nr">{{roomId}}</div>
+    <div class="doctor-name">{{doctor}}</div>
+  </header>
+
+  <main>
+    <div class="now">{{calling}}</div>
+    <div class="upcoming">
+      <table class="queue">
+        <thead>
+          <tr>
+            <th><i class="fa fa-sort-numeric-asc"></i></th>
+            <th><i class="fa fa-clock-o"></i></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="patient in patientQueue">
+            <td>{{ patient.number }}</td>
+            <td>{{ patient.time | timePassed }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <script>
+    // Get roomId from the page URL hash
+    var options = { roomId: window.location.hash.replace('#', '') };
+
+    window.onhashchange = function() {
+      window.location.reload();
+    };
+
+    // Load the sound effect file for when the next patient is called.
+    var alertSound = new Audio('Store_Door_Chime-Mike_Koenig-570742973.mp3');
+
+    // Setup the header
+    var header = new Vue({
+      el: 'header',
+
+      data: {
+        roomId: options.roomId,
+        doctor: ''
+      }
+    });
+
+
+    /**
+     * Setup the queue list
+     */
+    var main = new Vue({
+      el: 'main',
+
+      data: {
+        calling:      '',
+        patientQueue: []
+      },
+
+      filters: {
+        timePassed: function(time) {
+          return moment(time).fromNow();
+        }
+      }
+    });
+
+    // Initialize socket.io and make the connection to the server
+    // By default, socket.io will connect to the server which served the html file
+    var socket = io();
+
+    socket.on('connect', function() {
+      socket.emit('infoBoot', options.roomId);
+    });
+
+    socket.on('room', function(room) {
+      header.doctor = room.doctor;
+      main.calling  = room.calling;
+    });
+
+    socket.on('patientQueue', function(patientQueue) {
+      main.patientQueue = patientQueue;
+    });
+
+    socket.on('patientQueueChanges', function(change) {
+      if (change.old_val) {
+        var indexOfRemovedPatient = main.patientQueue.findIndex(function(item) {
+          return item.number == change.old_val.number;
+        });
+
+        if (indexOfRemovedPatient != -1) {
+            Vue.delete(main.patientQueue, indexOfRemovedPatient); 
+        }
+      }
+
+      if (change.new_val) {
+        var queue = main.patientQueue;
+
+        queue.push(change.new_val);
+
+        queue.sort(function(a, b) {
+          return new Date(a.time) > new Date(b.time);
+        });
+
+        main.patientQueue = queue;
+      }
+    });
+
+    socket.on('roomChanges', function(changes) {
+      if (changes.new_val) {
+        if (main.calling !== changes.new_val.calling && changes.new_val.calling) {
+            alertSound.currentTime = 0;
+            alertSound.play();
+        }
+
+        header.doctor = changes.new_val.doctor;
+        main.calling  = changes.new_val.calling;
+      }
+    });
+  </script>
+</body>
+</html>
