@@ -31,7 +31,7 @@
         <tbody>
           <tr v-for="patient in patientQueue">
             <td>{{ patient.number }}</td>
-            <td>{{ patient.time | timePassed }}</td>
+            <td>{{ timePassed(now, patient.time) }}</td>
           </tr>
         </tbody>
       </table>
@@ -60,20 +60,26 @@
     });
 
 
-    /**
-     * Setup the queue list
-     */
+    // Setup the queue list
     var main = new Vue({
       el: 'main',
 
       data: {
+        now:          new Date(),
         calling:      '',
         patientQueue: []
       },
 
-      filters: {
-        timePassed: function(time) {
-          return moment(time).fromNow();
+      created: function() {
+        setInterval(
+          function() { this.now = new Date(); }.bind(this),
+          1000
+        );
+      },
+
+      methods: {
+        timePassed: function(now, time) {
+          return moment(time).from(now);
         }
       }
     });
